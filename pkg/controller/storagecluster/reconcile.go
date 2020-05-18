@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"go/constant"
 	"os"
 	"reflect"
 	"sort"
@@ -1190,6 +1191,11 @@ func newCleanupJob(sc *ocsv1.StorageCluster) *batchv1.Job {
 		"app": "ceph-toolbox-job-${FAILED_OSD_ID}",
 	}
 
+	const purgeOSDScript = `set -x
+if [[ \"$osd_status\" == \"up\" ]]; then echo \"OSD ${FAILED_OSD_ID} is up and running. Please check if you entered correct ID of failed osd!\"; else echo \"OSD ${FAILED_OSD_ID} is down. Proceeding to mark out and purge\"
+ceph osd out osd.${FAILED_OSD_ID} 
+ceph osd purge osd.${FAILED_OSD_ID} --force --yes-i-really-mean-it; fi`
+
 	job := &batchv1.Job{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Job",
@@ -1237,7 +1243,12 @@ func newCleanupJob(sc *ocsv1.StorageCluster) *batchv1.Job {
 									ReadOnly:  true,
 								},
 							},
-							Command: []string{"bash", "-c", "ceph osd out osd.${FAILED_OSD_ID};ceph osd purge osd.${FAILED_OSD_ID} --force --yes-i-really-mean-it"},
+							Command: []string{
+							"/bin/bash",
+							"-c",
+							fmt.Sprintf(purgeOSDScript),
+						},
+
 						},
 					},
 					InitContainers: []corev1.Container{
