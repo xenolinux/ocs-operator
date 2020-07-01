@@ -853,6 +853,7 @@ func newCleanupJob(sc *ocsv1.StorageCluster) *batchv1.Job {
 	const purgeOSDScript = `
 set -x
 
+ceph osd rm 
 osd_status=$(ceph osd tree | grep "osd.${FAILED_OSD_ID} " | awk '{print $5}')
 if [[ "$osd_status" == "up" ]]; then
 echo "OSD ${FAILED_OSD_ID} is up and running."
